@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Who Has the Power? - Constitutional Card Game</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f8f9fa;
+      margin: 0;
+      padding: 2em;
+    }
+    #game {
+      max-width: 700px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px #bbb;
+      padding: 2em;
+    }
+    button {
+      margin: 0.5em;
+      padding: 0.7em 1.3em;
+      font-size: 1em;
+      border-radius: 5px;
+      border: 1px solid #008cba;
+      background: #008cba;
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #005f5f;
+    }
+    textarea {
+      width: 100%;
+      font-size: 1em;
+      margin-bottom: 1em;
+    }
+    #winner-text {
+      color: #008cba;
+      margin-bottom: 1em;
+    }
+    footer {
+      text-align: center;
+      margin-top: 2em;
+      color: #555;
+      font-size: 0.9em;
+    }
+  </style>
+</head>
+<body>
+  <h1>Who Has the Power?</h1>
+  <div id="game">
+    <div id="role-selection">
+      <h2>Choose Your Role</h2>
+      <button onclick="setRole('Federal')">Federal</button>
+      <button onclick="setRole('State')">State</button>
+      <button onclick="setRole('Local')">Local</button>
+    </div>
+    <div id="scenario" style="display:none;">
+      <h2>Scenario:</h2>
+      <p id="scenario-text"></p>
+      <h3>Your Power Cards:</h3>
+      <div id="power-cards"></div>
+      <h3>Your Argument:</h3>
+      <textarea id="argument" rows="3" cols="40" placeholder="Enter your constitutional argument here..."></textarea>
+      <button onclick="submitArgument()">Submit Argument</button>
+    </div>
+    <div id="vote" style="display:none;">
+      <h2>Vote for the Winning Argument</h2>
+      <div id="arguments"></div>
+      <button onclick="nextRound()">Next Round</button>
+    </div>
+    <div id="winner" style="display:none;">
+      <h2 id="winner-text"></h2>
+      <button onclick="restartGame()">Play Again</button>
+    </div>
+  </div>
+  <footer>
+    <p>Created for public health & constitutional law learning. Host on GitHub Pages and embed in Canvas with an iframe!</p>
+  </footer>
+  <script>
+    const scenarios = [
+      "Pandemic outbreak in multiple states",
+      "Contaminated water supply in one city",
+      "Opioid overdose spike in rural counties",
+      "Mandatory vaccination campaign",
+      "Wildfire smoke affecting multiple regions"
+    ];
+
+    const powerCards = {
+      Federal: [
+        "Commerce Clause (Art. I, Sec. 8)",
+        "Spending Power (Art. I, Sec. 8)",
+        "General Welfare Clause",
+        "Supremacy Clause (Art. VI)"
+      ],
+      State: [
+        "10th Amendment (Police Powers)",
+        "State Sovereignty",
+        "State Constitutions"
+      ],
+      Local: [
+        "Local Emergency Powers",
+        "Public Health Ordinance",
+        "Community Health Mandate"
+      ]
+    };
+
+    let currentRole = null;
+    let currentScenario = null;
+    let argumentsList = [];
+    let scenarioIndex = 0;
+    let selectedPowerCard = null;
+
+    function setRole(role) {
+      currentRole = role;
+      document.getElementById('role-selection').style.display = 'none';
+      document.getElementById('scenario').style.display = '';
+      loadScenario();
+      loadPowerCards();
+    }
+
+    function loadScenario() {
+      currentScenario = scenarios[scenarioIndex % scenarios.length];
+      document.getElementById('scenario-text').innerText = currentScenario;
+    }
+
+    function loadPowerCards() {
+      const container = document.getElementById('power-cards');
+      container.innerHTML = '';
+      powerCards[currentRole].forEach(card => {
+        const btn = document.createElement('button');
+        btn.innerText = card;
+        btn.onclick = () => selectPowerCard(card);
+        container.appendChild(btn);
+      });
+    }
+
+    function selectPowerCard(card) {
+      selectedPowerCard = card;
+      Array.from(document.getElementById('power-cards').children).forEach(btn => {
+        btn.style.background = btn.innerText === card ? "#005f5f" : "#008cba";
+      });
+    }
+
+    function submitArgument() {
+      const argText = document.getElementById('argument').value.trim();
+      if (!selectedPowerCard || !argText) {
+        alert("Please select a power card and enter your argument.");
+        return;
+      }
+      argumentsList.push({role: currentRole, card: selectedPowerCard, argument: argText});
+      showVote();
+    }
+
+    function showVote() {
+      document.getElementById('scenario').style.display = 'none';
+      document.getElementById('vote').style.display = '';
+      const container = document.getElementById('arguments');
+      container.innerHTML = '';
+      argumentsList.forEach((entry, idx) => {
+        const div = document.createElement('div');
+        div.style.marginBottom = "1em";
+        div.innerHTML = `<strong>${entry.role} (${entry.card}):</strong><br>${entry.argument}`;
+        const voteBtn = document.createElement('button');
+        voteBtn.innerText = "Vote for this";
+        voteBtn.onclick = () => declareWinner(idx);
+        div.appendChild(voteBtn);
+        container.appendChild(div);
+      });
+    }
+
+    function declareWinner(idx) {
+      document.getElementById('vote').style.display = 'none';
+      document.getElementById('winner').style.display = '';
+      document.getElementById('winner-text').innerText = `Winner: ${argumentsList[idx].role} — "${argumentsList[idx].card}"`;
+    }
+
+    function nextRound() {
+      scenarioIndex++;
+      argumentsList = [];
+      selectedPowerCard = null;
+      document.getElementById('argument').value = '';
+      document.getElementById('vote').style.display = 'none';
+      document.getElementById('scenario').style.display = '';
+      loadScenario();
+      loadPowerCards();
+    }
+
+    function restartGame() {
+      scenarioIndex = 0;
+      argumentsList = [];
+      selectedPowerCard = null;
+      currentRole = null;
+      document.getElementById('winner').style.display = 'none';
+      document.getElementById('role-selection').style.display = '';
+    }
+  </script>
+</body>
+</html>
