@@ -133,7 +133,6 @@
     </div>
   </div>
   <script>
-    // Clause Reference Data
     const CLAUSES = [
       {
         title: "Article I, Section 8 — Commerce Clause",
@@ -152,7 +151,6 @@
         meaning: "Powers not delegated to the federal government are reserved to the states/people. Public‑health link: vaccination requirements, quarantine, inspections, local enforcement.",
       },
     ];
-    // Game Scenarios
     const SCENARIOS = [
       {
         prompt: "A respiratory virus spreads from New York to New Jersey to Pennsylvania. Who can restrict interstate travel or issue national rules affecting state crossings?",
@@ -239,7 +237,6 @@
       }
     ];
 
-    // State variables
     let currentIndex = 0;
     let teamA = "Team A";
     let teamB = "Team B";
@@ -280,4 +277,93 @@
         btn.innerText = opt;
         btn.disabled = revealed;
         btn.onclick = () => { selected = i; updateChoiceButtons(); updateActionButtons(); };
+        if (selected === i) btn.classList.add("selected");
+        choicesDiv.appendChild(btn);
+      });
+      updateActionButtons();
+      $("answer-explanation").innerHTML = revealed ? `
+        <div>
+          <div class="text-sm text-gray-600">Correct answer</div>
+          <div style="font-weight:bold; margin-top:4px;">${card.options[card.correct]}</div>
+          <div style="margin-top:7px;">${card.reasoning}</div>
+          <div style="margin-top:7px; font-size:0.98em;">
+            <span style="font-weight:500;">Constitutional hook:</span> ${card.cites.join(" • ")}
+          </div>
+        </div>
+      ` : "";
+      $("gameEnd").style.display = "none";
+      $("scenario-card").style.display = "";
+    }
 
+    function updateChoiceButtons() {
+      document.querySelectorAll(".choice-btn").forEach((btn, idx) => {
+        btn.classList.toggle("selected", selected === idx);
+      });
+    }
+
+    function updateActionButtons() {
+      const actions = $("actionButtons");
+      actions.innerHTML = "";
+      if (!revealed) {
+        const revealBtn = document.createElement("button");
+        revealBtn.innerText = "Reveal Answer";
+        revealBtn.disabled = (selected === null);
+        revealBtn.onclick = handleReveal;
+        actions.appendChild(revealBtn);
+      } else {
+        const correct = selected === SCENARIOS[currentIndex].correct;
+        const verdict = document.createElement("span");
+        verdict.innerText = correct ? "Correct" : "Incorrect";
+        verdict.style = `padding:0.5em 1em; margin-right:1em; border-radius:6px; color:${correct ? "#0b6137" : "#a00"}; background:${correct ? "#d6f5e3" : "#fbe8e8"}; font-weight:600;`;
+        actions.appendChild(verdict);
+        const nextBtn = document.createElement("button");
+        nextBtn.innerText = "Award & Next Card";
+        nextBtn.onclick = () => handleMark(correct);
+        actions.appendChild(nextBtn);
+      }
+    }
+
+    function handleReveal() {
+      revealed = true;
+      renderGame();
+    }
+
+    function handleMark(correct) {
+      if (correct) {
+        if (turn === "A") scoreA++; else scoreB++;
+      }
+      turn = turn === "A" ? "B" : "A";
+      selected = null;
+      revealed = false;
+      currentIndex++;
+      if (currentIndex >= SCENARIOS.length) {
+        showWinner();
+      } else {
+        renderGame();
+      }
+    }
+
+    function showWinner() {
+      $("scenario-card").style.display = "none";
+      $("gameEnd").style.display = "";
+      let winner;
+      if (scoreA === scoreB) winner = "It's a tie!";
+      else winner = scoreA > scoreB ? teamA : teamB;
+      $("winnerText").innerText = "Winner: " + winner;
+    }
+
+    function restartGame() {
+      currentIndex = 0;
+      scoreA = 0;
+      scoreB = 0;
+      turn = "A";
+      selected = null;
+      revealed = false;
+      renderGame();
+    }
+
+    renderClauseRef();
+    renderGame();
+  </script>
+</body>
+</html>
