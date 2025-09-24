@@ -41,6 +41,14 @@
       color: #008cba;
       margin-bottom: 1em;
     }
+    #answer-explanation {
+      background: #f0f8ff;
+      border-radius: 6px;
+      padding: 1em;
+      margin-top: 1em;
+      color: #333;
+      font-size: 1em;
+    }
     footer {
       text-align: center;
       margin-top: 2em;
@@ -74,6 +82,7 @@
     </div>
     <div id="winner" style="display:none;">
       <h2 id="winner-text"></h2>
+      <div id="answer-explanation"></div>
       <button onclick="restartGame()">Play Again</button>
     </div>
   </div>
@@ -82,18 +91,53 @@
   </footer>
   <script>
     const scenarios = [
-      "Pandemic outbreak in multiple states",
-      "Contaminated water supply in one city",
-      "Opioid overdose spike in rural counties",
-      "Mandatory vaccination campaign",
-      "Wildfire smoke affecting multiple regions"
+      {
+        text: "Pandemic Crossing State Lines: The flu spreads rapidly from New York to New Jersey to Pennsylvania. Who has the constitutional authority to impose restrictions on interstate travel?",
+        answer: "Federal government (Commerce Clause, Article I, Section 8). States can quarantine within their borders, but interstate commerce falls under federal power.",
+        roles: ["Federal"]
+      },
+      {
+        text: "Restaurant Inspection: A local restaurant fails a food safety inspection for contaminated meat. Who has the authority to shut it down?",
+        answer: "State/local government (10th Amendment, police powers to regulate health and safety).",
+        roles: ["State", "Local"]
+      },
+      {
+        text: "Medicaid Expansion: Congress allocates money for states to expand Medicaid coverage. Who decides if the program is implemented in each state?",
+        answer: "Both. Federal government sets funding and standards (Spending Clause). States choose whether to accept and implement (10th Amendment sovereignty).",
+        roles: ["Federal", "State"]
+      },
+      {
+        text: "Tobacco Regulation: Congress passes a law restricting cigarette sales near schools nationwide. A state argues it already has stricter local laws. Who has the final say?",
+        answer: "Federal and state. Federal law (Commerce Clause) creates a minimum standard, but states can impose stricter rules under the 10th Amendment.",
+        roles: ["Federal", "State"]
+      },
+      {
+        text: "Environmental Regulation: A chemical spill in a river flows from one state into another, contaminating drinking water. Who regulates cleanup?",
+        answer: "Federal government (Commerce Clause and general welfare spending power). States also act, but interstate pollution triggers federal authority (EPA, Clean Water Act).",
+        roles: ["Federal", "State"]
+      },
+      {
+        text: "Mandatory Vaccination in Schools: A school district requires students to be vaccinated before attending class. Parents sue, claiming this violates their rights. Who has authority?",
+        answer: "State/local government (10th Amendment police powers). Backed by Supreme Court precedent (Jacobson v. Massachusetts, 1905).",
+        roles: ["State", "Local"]
+      },
+      {
+        text: "CDC Issues New Mask Guidance that Conflicts with State Policy: CDC recommends masks in schools; a state governor bans mask mandates. Who wins?",
+        answer: "State government. Federal agencies issue guidance, but enforcement authority in schools comes from states (10th Amendment). Federal power could re-enter if interstate commerce or federal funding is tied to compliance.",
+        roles: ["State"]
+      },
+      {
+        text: "Research Funding Cuts: Congress reduces NIH funding for opioid research. What happens to state and local research programs?",
+        answer: "Federal government controls funding (Spending Clause), but states may choose to fund programs independently.",
+        roles: ["Federal", "State"]
+      }
     ];
 
     const powerCards = {
       Federal: [
         "Commerce Clause (Art. I, Sec. 8)",
-        "Spending Power (Art. I, Sec. 8)",
-        "General Welfare Clause",
+        "Taxing & Spending Clause (Art. I, Sec. 8)",
+        "Necessary & Proper Clause (Art. I, Sec. 8)",
         "Supremacy Clause (Art. VI)"
       ],
       State: [
@@ -124,7 +168,7 @@
 
     function loadScenario() {
       currentScenario = scenarios[scenarioIndex % scenarios.length];
-      document.getElementById('scenario-text').innerText = currentScenario;
+      document.getElementById('scenario-text').innerText = currentScenario.text;
     }
 
     function loadPowerCards() {
@@ -176,6 +220,8 @@
       document.getElementById('vote').style.display = 'none';
       document.getElementById('winner').style.display = '';
       document.getElementById('winner-text').innerText = `Winner: ${argumentsList[idx].role} — "${argumentsList[idx].card}"`;
+      document.getElementById('answer-explanation').innerHTML =
+        `<strong>Correct Answer & Explanation:</strong><br>${currentScenario.answer}`;
     }
 
     function nextRound() {
@@ -183,7 +229,8 @@
       argumentsList = [];
       selectedPowerCard = null;
       document.getElementById('argument').value = '';
-      document.getElementById('vote').style.display = 'none';
+      document.getElementById('answer-explanation').innerHTML = '';
+      document.getElementById('winner').style.display = 'none';
       document.getElementById('scenario').style.display = '';
       loadScenario();
       loadPowerCards();
@@ -196,6 +243,7 @@
       currentRole = null;
       document.getElementById('winner').style.display = 'none';
       document.getElementById('role-selection').style.display = '';
+      document.getElementById('answer-explanation').innerHTML = '';
     }
   </script>
 </body>
