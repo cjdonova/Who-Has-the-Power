@@ -91,12 +91,6 @@
       border: 1px solid #e4eaf1;
       font-size: 0.97em;
     }
-    .footer {
-      text-align: center;
-      margin-top: 2em;
-      color: #555;
-      font-size: 0.9em;
-    }
     @media (max-width: 600px) {
       #game { padding: 0.5em; }
       .clause-list { grid-template-columns: 1fr; }
@@ -137,10 +131,153 @@
       <h3>Clause Reference</h3>
       <div class="clause-list" id="clauseList"></div>
     </div>
-    <div class="footer">
-      Tip: Use this game as a debrief to connect Article I, Section 8 (commerce, spending, necessary & proper) and the 10th Amendment (police powers) to concrete public‑health actions.<br>
-      Host on GitHub Pages and embed in Canvas with an iframe!
-    </div>
   </div>
   <script>
-    //
+    // Clause Reference Data
+    const CLAUSES = [
+      {
+        title: "Article I, Section 8 — Commerce Clause",
+        meaning: "Congress may regulate interstate commerce. Public‑health link: interstate disease control, FDA/OSHA/EPA national standards when activities affect commerce across states.",
+      },
+      {
+        title: "Article I, Section 8 — Taxing & Spending (General Welfare)",
+        meaning: "Congress raises revenue and spends for the general welfare. Public‑health link: Medicare, Medicaid, CDC/NIH funding and conditional grants to states.",
+      },
+      {
+        title: "Article I, Section 8 — Necessary & Proper",
+        meaning: "Congress may pass laws necessary to execute its enumerated powers. Public‑health link: creating/empowering federal health agencies and national reporting systems.",
+      },
+      {
+        title: "10th Amendment — Reserved Powers / Police Powers",
+        meaning: "Powers not delegated to the federal government are reserved to the states/people. Public‑health link: vaccination requirements, quarantine, inspections, local enforcement.",
+      },
+    ];
+    // Game Scenarios
+    const SCENARIOS = [
+      {
+        prompt: "A respiratory virus spreads from New York to New Jersey to Pennsylvania. Who can restrict interstate travel or issue national rules affecting state crossings?",
+        options: ["Federal", "State/Local", "Both/Shared", "Depends (court ruling)"],
+        correct: 0,
+        reasoning: "Federal (Commerce Clause). States can quarantine within borders, but interstate travel/commerce falls under federal authority.",
+        cites: ["Article I, Section 8 — Commerce Clause"],
+      },
+      {
+        prompt: "A local restaurant fails a food‑safety inspection; the health department orders it to close immediately. Who holds this authority?",
+        options: ["Federal", "State/Local", "Both/Shared", "Depends (court ruling)"],
+        correct: 1,
+        reasoning: "State/Local (10th Amendment police powers) cover restaurant inspections and local closures.",
+        cites: ["10th Amendment — Reserved Powers / Police Powers"],
+      },
+      {
+        prompt: "Congress funds Medicaid expansion and sets conditions. Who decides whether to implement the expansion in a given state?",
+        options: ["Federal", "State/Local", "Both/Shared", "Depends (court ruling)"],
+        correct: 2,
+        reasoning: "Both/Shared. Federal uses Spending power to fund and set conditions; states decide to accept and implement.",
+        cites: [
+          "Article I, Section 8 — Taxing & Spending (General Welfare)",
+          "10th Amendment — Reserved Powers / Police Powers"
+        ],
+      },
+      {
+        prompt: "CDC issues school mask guidance; a state bans school mask mandates. Whose rule controls schools?",
+        options: ["Federal", "State/Local", "Both/Shared", "Depends (court ruling)"],
+        correct: 1,
+        reasoning: "State/Local. CDC guidance is nonbinding. States control school mandates absent federal law tying funding or commerce impact.",
+        cites: ["10th Amendment — Reserved Powers / Police Powers"],
+      },
+      {
+        prompt: "A river contamination crosses from State A into State B. Who regulates cleanup and standards?",
+        options: ["Federal", "State/Local", "Both/Shared", "Depends (court ruling)"],
+        correct: 2,
+        reasoning: "Both/Shared. Interstate pollution triggers federal authority (commerce/spending; e.g., EPA programs), while states enforce within borders.",
+        cites: [
+          "Article I, Section 8 — Commerce Clause",
+          "Article I, Section 8 — Taxing & Spending (General Welfare)",
+        ],
+      },
+      {
+        prompt: "A school district requires student vaccinations; parents sue. Who holds authority to require vaccines for school entry?",
+        options: ["Federal", "State/Local", "Both/Shared", "Depends (court ruling)"],
+        correct: 1,
+        reasoning: "State/Local (police powers), supported by precedent (Jacobson v. Massachusetts).",
+        cites: ["10th Amendment — Reserved Powers / Police Powers"],
+      },
+      {
+        prompt: "Congress sets a national minimum age and distance restrictions for tobacco sales near schools. Can states adopt stricter rules?",
+        options: ["Federal", "State/Local", "Both/Shared", "Depends (court ruling)"],
+        correct: 2,
+        reasoning: "Both/Shared. Federal sets a floor using Commerce power; states may go stricter under 10th Amendment.",
+        cites: [
+          "Article I, Section 8 — Commerce Clause",
+          "10th Amendment — Reserved Powers / Police Powers",
+        ],
+      },
+      {
+        prompt: "NIH research funding for opioids is cut at the federal level. Who controls whether research programs continue in a state?",
+        options: ["Federal", "State/Local", "Both/Shared", "Depends (court ruling)"],
+        correct: 0,
+        reasoning: "Federal controls NIH grants via Spending power; states may supplement with state funds, but federal cut is federal authority.",
+        cites: ["Article I, Section 8 — Taxing & Spending (General Welfare)"],
+      },
+      {
+        prompt: "A federal agency issues a new guideline that contradicts an existing state public‑health program. Who prevails?",
+        options: ["Federal", "State/Local", "Both/Shared", "Depends (court ruling)"],
+        correct: 3,
+        reasoning: "Depends. Guidance alone is nonbinding; rules tied to spending or statutes may preempt. Courts often decide preemption/authority boundaries.",
+        cites: [
+          "Article I, Section 8 — Necessary & Proper",
+          "Article I, Section 8 — Taxing & Spending (General Welfare)",
+          "10th Amendment — Reserved Powers / Police Powers",
+        ],
+      },
+      {
+        prompt: "A governor orders quarantine at the county level during an outbreak. Who grants this authority?",
+        options: ["Federal", "State/Local", "Both/Shared", "Depends (court ruling)"],
+        correct: 1,
+        reasoning: "State/Local under police powers; locals often act via delegated authority from state statutes/regulations.",
+        cites: ["10th Amendment — Reserved Powers / Police Powers"],
+      }
+    ];
+
+    // State variables
+    let currentIndex = 0;
+    let teamA = "Team A";
+    let teamB = "Team B";
+    let scoreA = 0;
+    let scoreB = 0;
+    let turn = "A";
+    let selected = null;
+    let revealed = false;
+
+    function $(id) { return document.getElementById(id); }
+
+    function renderClauseRef() {
+      const list = $("clauseList");
+      list.innerHTML = "";
+      CLAUSES.forEach(c => {
+        const div = document.createElement("div");
+        div.className = "clause-item";
+        div.innerHTML = `<strong>${c.title}</strong><br><span>${c.meaning}</span>`;
+        list.appendChild(div);
+      });
+    }
+
+    function renderGame() {
+      $("teamAname").innerText = teamA;
+      $("teamBname").innerText = teamB;
+      $("scoreA").innerText = scoreA;
+      $("scoreB").innerText = scoreB;
+      $("turnDisplay").innerText = turn === "A" ? teamA : teamB;
+      $("cardNumber").innerText = currentIndex + 1;
+      $("totalCards").innerText = SCENARIOS.length;
+      const card = SCENARIOS[currentIndex];
+      $("scenarioPrompt").innerText = card.prompt;
+      const choicesDiv = $("choices");
+      choicesDiv.innerHTML = "";
+      card.options.forEach((opt, i) => {
+        const btn = document.createElement("button");
+        btn.className = "choice-btn";
+        btn.innerText = opt;
+        btn.disabled = revealed;
+        btn.onclick = () => { selected = i; updateChoiceButtons(); updateActionButtons(); };
+
