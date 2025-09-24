@@ -1,250 +1,389 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Who Has the Power? - Constitutional Card Game</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f8f9fa;
-      margin: 0;
-      padding: 2em;
+import React, { useMemo, useState } from "react";
+
+// =======================
+// GAME DATA
+// =======================
+const CLAUSES = [
+  {
+    title: "Article I, Section 8 — Commerce Clause",
+    meaning:
+      "Congress may regulate interstate commerce. Public‑health link: interstate disease control, FDA/OSHA/EPA national standards when activities affect commerce across states.",
+  },
+  {
+    title: "Article I, Section 8 — Taxing & Spending (General Welfare)",
+    meaning:
+      "Congress raises revenue and spends for the general welfare. Public‑health link: Medicare, Medicaid, CDC/NIH funding and conditional grants to states.",
+  },
+  {
+    title: "Article I, Section 8 — Necessary & Proper",
+    meaning:
+      "Congress may pass laws necessary to execute its enumerated powers. Public‑health link: creating/empowering federal health agencies and national reporting systems.",
+  },
+  {
+    title: "10th Amendment — Reserved Powers / Police Powers",
+    meaning:
+      "Powers not delegated to the federal government are reserved to the states/people. Public‑health link: vaccination requirements, quarantine, inspections, local enforcement.",
+  },
+];
+
+const SCENARIOS = [
+  {
+    id: 1,
+    prompt:
+      "A respiratory virus spreads from New York to New Jersey to Pennsylvania. Who can restrict interstate travel or issue national rules affecting state crossings?",
+    options: ["Federal", "State/Local", "Both/Shared", "Depends (court ruling)"],
+    correct: 0,
+    reasoning:
+      "Federal (Commerce Clause). States can quarantine within borders, but interstate travel/commerce falls under federal authority.",
+    cites: ["Article I, Section 8 — Commerce Clause"],
+  },
+  {
+    id: 2,
+    prompt:
+      "A local restaurant fails a food‑safety inspection; the health department orders it to close immediately. Who holds this authority?",
+    options: ["Federal", "State/Local", "Both/Shared", "Depends (court ruling)"],
+    correct: 1,
+    reasoning:
+      "State/Local (10th Amendment police powers) cover restaurant inspections and local closures.",
+    cites: ["10th Amendment — Reserved Powers / Police Powers"],
+  },
+  {
+    id: 3,
+    prompt:
+      "Congress funds Medicaid expansion and sets conditions. Who decides whether to implement the expansion in a given state?",
+    options: ["Federal", "State/Local", "Both/Shared", "Depends (court ruling)"],
+    correct: 2,
+    reasoning:
+      "Both/Shared. Federal uses Spending power to fund and set conditions; states decide to accept and implement.",
+    cites: [
+      "Article I, Section 8 — Taxing & Spending (General Welfare)",
+      "10th Amendment — Reserved Powers / Police Powers",
+    ],
+  },
+  {
+    id: 4,
+    prompt:
+      "CDC issues school mask guidance; a state bans school mask mandates. Whose rule controls schools?",
+    options: ["Federal", "State/Local", "Both/Shared", "Depends (court ruling)"],
+    correct: 1,
+    reasoning:
+      "State/Local. CDC guidance is nonbinding. States control school mandates absent federal law tying funding or commerce impact.",
+    cites: ["10th Amendment — Reserved Powers / Police Powers"],
+  },
+  {
+    id: 5,
+    prompt:
+      "A river contamination crosses from State A into State B. Who regulates cleanup and standards?",
+    options: ["Federal", "State/Local", "Both/Shared", "Depends (court ruling)"],
+    correct: 2,
+    reasoning:
+      "Both/Shared. Interstate pollution triggers federal authority (commerce/spending; e.g., EPA programs), while states enforce within borders.",
+    cites: [
+      "Article I, Section 8 — Commerce Clause",
+      "Article I, Section 8 — Taxing & Spending (General Welfare)",
+    ],
+  },
+  {
+    id: 6,
+    prompt:
+      "A school district requires student vaccinations; parents sue. Who holds authority to require vaccines for school entry?",
+    options: ["Federal", "State/Local", "Both/Shared", "Depends (court ruling)"],
+    correct: 1,
+    reasoning:
+      "State/Local (police powers), supported by precedent (Jacobson v. Massachusetts).",
+    cites: ["10th Amendment — Reserved Powers / Police Powers"],
+  },
+  {
+    id: 7,
+    prompt:
+      "Congress sets a national minimum age and distance restrictions for tobacco sales near schools. Can states adopt stricter rules?",
+    options: ["Federal", "State/Local", "Both/Shared", "Depends (court ruling)"],
+    correct: 2,
+    reasoning:
+      "Both/Shared. Federal sets a floor using Commerce power; states may go stricter under 10th Amendment.",
+    cites: [
+      "Article I, Section 8 — Commerce Clause",
+      "10th Amendment — Reserved Powers / Police Powers",
+    ],
+  },
+  {
+    id: 8,
+    prompt:
+      "NIH research funding for opioids is cut at the federal level. Who controls whether research programs continue in a state?",
+    options: ["Federal", "State/Local", "Both/Shared", "Depends (court ruling)"],
+    correct: 0,
+    reasoning:
+      "Federal controls NIH grants via Spending power; states may supplement with state funds, but federal cut is federal authority.",
+    cites: ["Article I, Section 8 — Taxing & Spending (General Welfare)"],
+  },
+  {
+    id: 9,
+    prompt:
+      "A federal agency issues a new guideline that contradicts an existing state public‑health program. Who prevails?",
+    options: ["Federal", "State/Local", "Both/Shared", "Depends (court ruling)"],
+    correct: 3,
+    reasoning:
+      "Depends. Guidance alone is nonbinding; rules tied to spending or statutes may preempt. Courts often decide preemption/authority boundaries.",
+    cites: [
+      "Article I, Section 8 — Necessary & Proper",
+      "Article I, Section 8 — Taxing & Spending (General Welfare)",
+      "10th Amendment — Reserved Powers / Police Powers",
+    ],
+  },
+  {
+    id: 10,
+    prompt:
+      "A governor orders quarantine at the county level during an outbreak. Who grants this authority?",
+    options: ["Federal", "State/Local", "Both/Shared", "Depends (court ruling)"],
+    correct: 1,
+    reasoning:
+      "State/Local under police powers; locals often act via delegated authority from state statutes/regulations.",
+    cites: ["10th Amendment — Reserved Powers / Police Powers"],
+  },
+];
+
+// Utility: shuffle without mutating original
+function useShuffledDeck(list) {
+  return useMemo(() => {
+    const copy = [...list];
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
     }
-    #game {
-      max-width: 700px;
-      margin: 0 auto;
-      background: #fff;
-      border-radius: 10px;
-      box-shadow: 0 2px 8px #bbb;
-      padding: 2em;
+    return copy;
+  }, [list]);
+}
+
+export default function ConstitutionalPHGame() {
+  const deck = useShuffledDeck(SCENARIOS);
+  const [index, setIndex] = useState(0);
+  const [teamAName, setTeamAName] = useState("Team A");
+  const [teamBName, setTeamBName] = useState("Team B");
+  const [scores, setScores] = useState({ A: 0, B: 0 });
+  const [selected, setSelected] = useState(null); // selected option index
+  const [revealed, setRevealed] = useState(false);
+  const [turn, setTurn] = useState("A");
+
+  const card = deck[index];
+  const gameOver = index >= deck.length;
+
+  function awardPoint(teamKey, amount = 1) {
+    setScores((s) => ({ ...s, [teamKey]: s[teamKey] + amount }));
+  }
+
+  function handleReveal() {
+    setRevealed(true);
+  }
+
+  function handleMark(correct) {
+    if (correct) {
+      awardPoint(turn);
     }
-    button {
-      margin: 0.5em;
-      padding: 0.7em 1.3em;
-      font-size: 1em;
-      border-radius: 5px;
-      border: 1px solid #008cba;
-      background: #008cba;
-      color: #fff;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    button:hover {
-      background: #005f5f;
-    }
-    textarea {
-      width: 100%;
-      font-size: 1em;
-      margin-bottom: 1em;
-    }
-    #winner-text {
-      color: #008cba;
-      margin-bottom: 1em;
-    }
-    #answer-explanation {
-      background: #f0f8ff;
-      border-radius: 6px;
-      padding: 1em;
-      margin-top: 1em;
-      color: #333;
-      font-size: 1em;
-    }
-    footer {
-      text-align: center;
-      margin-top: 2em;
-      color: #555;
-      font-size: 0.9em;
-    }
-  </style>
-</head>
-<body>
-  <h1>Who Has the Power?</h1>
-  <div id="game">
-    <div id="role-selection">
-      <h2>Choose Your Role</h2>
-      <button onclick="setRole('Federal')">Federal</button>
-      <button onclick="setRole('State')">State</button>
-      <button onclick="setRole('Local')">Local</button>
+    // next turn + next card
+    setTurn((t) => (t === "A" ? "B" : "A"));
+    setSelected(null);
+    setRevealed(false);
+    setIndex((i) => i + 1);
+  }
+
+  function resetGame() {
+    setIndex(0);
+    setScores({ A: 0, B: 0 });
+    setSelected(null);
+    setRevealed(false);
+    setTurn("A");
+  }
+
+  if (gameOver) {
+    return (
+      <div className="w-full max-w-4xl mx-auto p-6">
+        <Header />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 my-6">
+          <ScoreCard name={teamAName} score={scores.A} highlight={scores.A >= scores.B} />
+          <ScoreCard name={teamBName} score={scores.B} highlight={scores.B >= scores.A} />
+          <div className="rounded-2xl border p-4">
+            <h3 className="text-lg font-semibold mb-2">Winner</h3>
+            <p className="text-2xl font-bold">
+              {scores.A === scores.B ? "It's a tie!" : scores.A > scores.B ? teamAName : teamBName}
+            </p>
+            <button className="mt-4 px-4 py-2 rounded-xl border hover:bg-gray-50" onClick={resetGame}>
+              Play Again
+            </button>
+          </div>
+        </div>
+        <ClauseReference />
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full max-w-5xl mx-auto p-6">
+      <Header />
+
+      {/* Team setup + scoreboard */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="rounded-2xl border p-4">
+          <label className="block text-sm font-medium">Team A name</label>
+          <input
+            className="mt-1 w-full rounded-xl border px-3 py-2"
+            value={teamAName}
+            onChange={(e) => setTeamAName(e.target.value)}
+          />
+        </div>
+        <div className="rounded-2xl border p-4">
+          <label className="block text-sm font-medium">Team B name</label>
+          <input
+            className="mt-1 w-full rounded-xl border px-3 py-2"
+            value={teamBName}
+            onChange={(e) => setTeamBName(e.target.value)}
+          />
+        </div>
+        <div className="rounded-2xl border p-4 flex items-center justify-between gap-3">
+          <div>
+            <div className="text-sm text-gray-600">Current Turn</div>
+            <div className="text-xl font-semibold">{turn === "A" ? teamAName : teamBName}</div>
+          </div>
+          <div className="flex gap-3">
+            <ScorePill label={teamAName} score={scores.A} active={turn === "A"} />
+            <ScorePill label={teamBName} score={scores.B} active={turn === "B"} />
+          </div>
+        </div>
+      </div>
+
+      {/* Scenario card */}
+      <div className="mt-6 rounded-2xl border p-5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-sm text-gray-600">Card {index + 1} / {deck.length}</div>
+          <button className="px-3 py-1.5 rounded-xl border hover:bg-gray-50" onClick={resetGame}>Reset</button>
+        </div>
+        <h2 className="mt-2 text-2xl font-semibold">Scenario</h2>
+        <p className="mt-2 text-lg leading-relaxed">{card.prompt}</p>
+
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+          {card.options.map((opt, i) => (
+            <button
+              key={i}
+              className={
+                "text-left rounded-xl border px-4 py-3 transition " +
+                (selected === i ? "ring-2 ring-indigo-500 bg-indigo-50" : "hover:bg-gray-50")
+              }
+              onClick={() => setSelected(i)}
+              disabled={revealed}
+            >
+              <div className="font-medium">{opt}</div>
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-5 flex flex-wrap items-center gap-3">
+          {!revealed ? (
+            <button
+              className="px-4 py-2 rounded-xl bg-black text-white hover:opacity-90"
+              onClick={handleReveal}
+              disabled={selected === null}
+              title={selected === null ? "Select an answer first" : "Reveal answer"}
+            >
+              Reveal Answer
+            </button>
+          ) : (
+            <>
+              <div
+                className={
+                  "px-3 py-1.5 rounded-xl text-sm " +
+                  (selected === card.correct ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800")
+                }
+              >
+                {selected === card.correct ? "Correct" : "Incorrect"}
+              </div>
+              <button
+                className="px-4 py-2 rounded-xl border hover:bg-gray-50"
+                onClick={() => handleMark(selected === card.correct)}
+              >
+                Award & Next Card
+              </button>
+            </>
+          )}
+        </div>
+
+        {revealed && (
+          <div className="mt-5 rounded-xl border p-4 bg-gray-50">
+            <div className="text-sm text-gray-600">Correct answer</div>
+            <div className="text-lg font-semibold mt-1">{card.options[card.correct]}</div>
+            <p className="mt-2 text-base">{card.reasoning}</p>
+            <div className="mt-3 text-sm text-gray-700">
+              <span className="font-medium">Constitutional hook:</span> {card.cites.join(" • ")}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Clause reference */}
+      <ClauseReference />
+
+      <FooterNote />
     </div>
-    <div id="scenario" style="display:none;">
-      <h2>Scenario:</h2>
-      <p id="scenario-text"></p>
-      <h3>Your Power Cards:</h3>
-      <div id="power-cards"></div>
-      <h3>Your Argument:</h3>
-      <textarea id="argument" rows="3" cols="40" placeholder="Enter your constitutional argument here..."></textarea>
-      <button onclick="submitArgument()">Submit Argument</button>
+  );
+}
+
+function Header() {
+  return (
+    <div className="mb-4">
+      <h1 className="text-3xl font-bold">Who Has the Power? — Constitutional Public Health</h1>
+      <p className="text-gray-700 mt-1">
+        Two teams take turns selecting an answer. Reveal the answer to auto‑mark correct/incorrect and advance. Points are
+        awarded to the team whose turn it is when correct.
+      </p>
     </div>
-    <div id="vote" style="display:none;">
-      <h2>Vote for the Winning Argument</h2>
-      <div id="arguments"></div>
-      <button onclick="nextRound()">Next Round</button>
+  );
+}
+
+function ScoreCard({ name, score, highlight }) {
+  return (
+    <div className={"rounded-2xl border p-4 " + (highlight ? "bg-gray-50" : "") }>
+      <div className="text-sm text-gray-600">Score</div>
+      <div className="text-xl font-semibold">{name}</div>
+      <div className="text-3xl font-bold mt-1">{score}</div>
     </div>
-    <div id="winner" style="display:none;">
-      <h2 id="winner-text"></h2>
-      <div id="answer-explanation"></div>
-      <button onclick="restartGame()">Play Again</button>
-    </div>
-  </div>
-  <footer>
-    <p>Created for public health & constitutional law learning. Host on GitHub Pages and embed in Canvas with an iframe!</p>
-  </footer>
-  <script>
-    const scenarios = [
-      {
-        text: "Pandemic Crossing State Lines: The flu spreads rapidly from New York to New Jersey to Pennsylvania. Who has the constitutional authority to impose restrictions on interstate travel?",
-        answer: "Federal government (Commerce Clause, Article I, Section 8). States can quarantine within their borders, but interstate commerce falls under federal power.",
-        roles: ["Federal"]
-      },
-      {
-        text: "Restaurant Inspection: A local restaurant fails a food safety inspection for contaminated meat. Who has the authority to shut it down?",
-        answer: "State/local government (10th Amendment, police powers to regulate health and safety).",
-        roles: ["State", "Local"]
-      },
-      {
-        text: "Medicaid Expansion: Congress allocates money for states to expand Medicaid coverage. Who decides if the program is implemented in each state?",
-        answer: "Both. Federal government sets funding and standards (Spending Clause). States choose whether to accept and implement (10th Amendment sovereignty).",
-        roles: ["Federal", "State"]
-      },
-      {
-        text: "Tobacco Regulation: Congress passes a law restricting cigarette sales near schools nationwide. A state argues it already has stricter local laws. Who has the final say?",
-        answer: "Federal and state. Federal law (Commerce Clause) creates a minimum standard, but states can impose stricter rules under the 10th Amendment.",
-        roles: ["Federal", "State"]
-      },
-      {
-        text: "Environmental Regulation: A chemical spill in a river flows from one state into another, contaminating drinking water. Who regulates cleanup?",
-        answer: "Federal government (Commerce Clause and general welfare spending power). States also act, but interstate pollution triggers federal authority (EPA, Clean Water Act).",
-        roles: ["Federal", "State"]
-      },
-      {
-        text: "Mandatory Vaccination in Schools: A school district requires students to be vaccinated before attending class. Parents sue, claiming this violates their rights. Who has authority?",
-        answer: "State/local government (10th Amendment police powers). Backed by Supreme Court precedent (Jacobson v. Massachusetts, 1905).",
-        roles: ["State", "Local"]
-      },
-      {
-        text: "CDC Issues New Mask Guidance that Conflicts with State Policy: CDC recommends masks in schools; a state governor bans mask mandates. Who wins?",
-        answer: "State government. Federal agencies issue guidance, but enforcement authority in schools comes from states (10th Amendment). Federal power could re-enter if interstate commerce or federal funding is tied to compliance.",
-        roles: ["State"]
-      },
-      {
-        text: "Research Funding Cuts: Congress reduces NIH funding for opioid research. What happens to state and local research programs?",
-        answer: "Federal government controls funding (Spending Clause), but states may choose to fund programs independently.",
-        roles: ["Federal", "State"]
+  );
+}
+
+function ScorePill({ label, score, active }) {
+  return (
+    <div
+      className={
+        "px-3 py-2 rounded-xl border text-sm flex items-center gap-2 " +
+        (active ? "bg-indigo-50 ring-1 ring-indigo-300" : "")
       }
-    ];
+    >
+      <span className="font-medium">{label}</span>
+      <span className="px-2 py-0.5 rounded-lg bg-gray-100">{score}</span>
+    </div>
+  );
+}
 
-    const powerCards = {
-      Federal: [
-        "Commerce Clause (Art. I, Sec. 8)",
-        "Taxing & Spending Clause (Art. I, Sec. 8)",
-        "Necessary & Proper Clause (Art. I, Sec. 8)",
-        "Supremacy Clause (Art. VI)"
-      ],
-      State: [
-        "10th Amendment (Police Powers)",
-        "State Sovereignty",
-        "State Constitutions"
-      ],
-      Local: [
-        "Local Emergency Powers",
-        "Public Health Ordinance",
-        "Community Health Mandate"
-      ]
-    };
+function ClauseReference() {
+  return (
+    <div className="mt-8 rounded-2xl border p-5 bg-white">
+      <h3 className="text-xl font-semibold">Clause Reference</h3>
+      <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+        {CLAUSES.map((c, idx) => (
+          <div key={idx} className="rounded-xl border p-3 bg-gray-50">
+            <div className="font-medium">{c.title}</div>
+            <div className="text-sm text-gray-700 mt-1">{c.meaning}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
-    let currentRole = null;
-    let currentScenario = null;
-    let argumentsList = [];
-    let scenarioIndex = 0;
-    let selectedPowerCard = null;
-
-    function setRole(role) {
-      currentRole = role;
-      document.getElementById('role-selection').style.display = 'none';
-      document.getElementById('scenario').style.display = '';
-      loadScenario();
-      loadPowerCards();
-    }
-
-    function loadScenario() {
-      currentScenario = scenarios[scenarioIndex % scenarios.length];
-      document.getElementById('scenario-text').innerText = currentScenario.text;
-    }
-
-    function loadPowerCards() {
-      const container = document.getElementById('power-cards');
-      container.innerHTML = '';
-      powerCards[currentRole].forEach(card => {
-        const btn = document.createElement('button');
-        btn.innerText = card;
-        btn.onclick = () => selectPowerCard(card);
-        container.appendChild(btn);
-      });
-    }
-
-    function selectPowerCard(card) {
-      selectedPowerCard = card;
-      Array.from(document.getElementById('power-cards').children).forEach(btn => {
-        btn.style.background = btn.innerText === card ? "#005f5f" : "#008cba";
-      });
-    }
-
-    function submitArgument() {
-      const argText = document.getElementById('argument').value.trim();
-      if (!selectedPowerCard || !argText) {
-        alert("Please select a power card and enter your argument.");
-        return;
-      }
-      argumentsList.push({role: currentRole, card: selectedPowerCard, argument: argText});
-      showVote();
-    }
-
-    function showVote() {
-      document.getElementById('scenario').style.display = 'none';
-      document.getElementById('vote').style.display = '';
-      const container = document.getElementById('arguments');
-      container.innerHTML = '';
-      argumentsList.forEach((entry, idx) => {
-        const div = document.createElement('div');
-        div.style.marginBottom = "1em";
-        div.innerHTML = `<strong>${entry.role} (${entry.card}):</strong><br>${entry.argument}`;
-        const voteBtn = document.createElement('button');
-        voteBtn.innerText = "Vote for this";
-        voteBtn.onclick = () => declareWinner(idx);
-        div.appendChild(voteBtn);
-        container.appendChild(div);
-      });
-    }
-
-    function declareWinner(idx) {
-      document.getElementById('vote').style.display = 'none';
-      document.getElementById('winner').style.display = '';
-      document.getElementById('winner-text').innerText = `Winner: ${argumentsList[idx].role} — "${argumentsList[idx].card}"`;
-      document.getElementById('answer-explanation').innerHTML =
-        `<strong>Correct Answer & Explanation:</strong><br>${currentScenario.answer}`;
-    }
-
-    function nextRound() {
-      scenarioIndex++;
-      argumentsList = [];
-      selectedPowerCard = null;
-      document.getElementById('argument').value = '';
-      document.getElementById('answer-explanation').innerHTML = '';
-      document.getElementById('winner').style.display = 'none';
-      document.getElementById('scenario').style.display = '';
-      loadScenario();
-      loadPowerCards();
-    }
-
-    function restartGame() {
-      scenarioIndex = 0;
-      argumentsList = [];
-      selectedPowerCard = null;
-      currentRole = null;
-      document.getElementById('winner').style.display = 'none';
-      document.getElementById('role-selection').style.display = '';
-      document.getElementById('answer-explanation').innerHTML = '';
-    }
-  </script>
-</body>
-</html>
+function FooterNote() {
+  return (
+    <div className="mt-6 text-sm text-gray-600">
+      <p>
+        Tip: Use this game as a debrief to connect Article I, Section 8 (commerce, spending, necessary & proper) and the 10th
+        Amendment (police powers) to concrete public‑health actions. You can edit questions in the source file.
+      </p>
+    </div>
+  );
+}
